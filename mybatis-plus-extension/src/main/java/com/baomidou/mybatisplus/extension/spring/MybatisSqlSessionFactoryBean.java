@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ * Copyright (c) 2011-2021, baomidou (jobob@qq.com).
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.baomidou.mybatisplus.extension.spring;
 
@@ -20,12 +20,11 @@ import com.baomidou.mybatisplus.core.MybatisPlusVersion;
 import com.baomidou.mybatisplus.core.MybatisSqlSessionFactoryBuilder;
 import com.baomidou.mybatisplus.core.MybatisXMLConfigBuilder;
 import com.baomidou.mybatisplus.core.config.GlobalConfig;
-import com.baomidou.mybatisplus.core.enums.IEnum;
 import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
+import com.baomidou.mybatisplus.core.handlers.MybatisEnumTypeHandler;
 import com.baomidou.mybatisplus.core.toolkit.Assert;
 import com.baomidou.mybatisplus.core.toolkit.GlobalConfigUtils;
 import com.baomidou.mybatisplus.core.toolkit.StringPool;
-import com.baomidou.mybatisplus.extension.handlers.MybatisEnumTypeHandler;
 import com.baomidou.mybatisplus.extension.toolkit.SqlHelper;
 import lombok.Setter;
 import org.apache.ibatis.builder.xml.XMLMapperBuilder;
@@ -140,7 +139,9 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
 
     private ObjectWrapperFactory objectWrapperFactory;
 
-    // TODO 自定义枚举包
+    /**
+     * TODO 自定义枚举包
+     */
     @Setter
     private String typeEnumsPackage;
 
@@ -323,7 +324,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
         this.configuration = configuration;
     }
 
-    public MybatisConfiguration getConfiguration(){
+    public MybatisConfiguration getConfiguration() {
         return this.configuration;
     }
 
@@ -443,7 +444,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
      */
     protected SqlSessionFactory buildSqlSessionFactory() throws Exception {
 
-        final MybatisConfiguration targetConfiguration;
+        final Configuration targetConfiguration;
 
         // TODO 使用 MybatisXmlConfigBuilder 而不是 XMLConfigBuilder
         MybatisXMLConfigBuilder xmlConfigBuilder = null;
@@ -470,7 +471,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
         this.globalConfig.setDbConfig(Optional.ofNullable(this.globalConfig.getDbConfig()).orElseGet(GlobalConfig.DbConfig::new));
 
         // TODO 初始化 id-work 以及 打印骚东西
-        targetConfiguration.setGlobalConfig(this.globalConfig);
+        GlobalConfigUtils.setGlobalConfig(targetConfiguration, this.globalConfig);
 
         // TODO 自定义枚举类扫描处理
         if (hasLength(this.typeEnumsPackage)) {
@@ -503,7 +504,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
             TypeHandlerRegistry typeHandlerRegistry = targetConfiguration.getTypeHandlerRegistry();
             classes.stream()
                 .filter(Class::isEnum)
-                .filter(cls -> IEnum.class.isAssignableFrom(cls) || MybatisEnumTypeHandler.dealEnumType(cls).isPresent())
+                .filter(MybatisEnumTypeHandler::isMpEnums)
                 .forEach(cls -> typeHandlerRegistry.register(cls, MybatisEnumTypeHandler.class));
         }
 
@@ -534,7 +535,6 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
         if (hasLength(this.typeHandlersPackage)) {
             scanClasses(this.typeHandlersPackage, TypeHandler.class).stream().filter(clazz -> !clazz.isAnonymousClass())
                 .filter(clazz -> !clazz.isInterface()).filter(clazz -> !Modifier.isAbstract(clazz.getModifiers()))
-                .filter(clazz -> ClassUtils.getConstructorIfAvailable(clazz) != null)
                 .forEach(targetConfiguration.getTypeHandlerRegistry()::register);
         }
 
@@ -554,7 +554,7 @@ public class MybatisSqlSessionFactoryBean implements FactoryBean<SqlSessionFacto
 
         Optional.ofNullable(this.defaultScriptingLanguageDriver).ifPresent(targetConfiguration::setDefaultScriptingLanguage);
 
-        if (this.databaseIdProvider != null) {//fix #64 set databaseId before parse mapper xmls
+        if (this.databaseIdProvider != null) {// fix #64 set databaseId before parse mapper xmls
             try {
                 targetConfiguration.setDatabaseId(this.databaseIdProvider.getDatabaseId(this.dataSource));
             } catch (SQLException e) {

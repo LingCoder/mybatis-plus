@@ -1,31 +1,26 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ * Copyright (c) 2011-2021, baomidou (jobob@qq.com).
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.baomidou.mybatisplus.extension.plugins.pagination;
 
 import com.baomidou.mybatisplus.annotation.DbType;
-import com.baomidou.mybatisplus.core.metadata.IPage;
-import com.baomidou.mybatisplus.core.toolkit.Assert;
-import com.baomidou.mybatisplus.core.toolkit.ClassUtils;
 import com.baomidou.mybatisplus.core.toolkit.ExceptionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringUtils;
-import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.IDialect;
-import org.apache.ibatis.session.RowBounds;
+import com.baomidou.mybatisplus.extension.plugins.pagination.dialects.*;
 
+import java.util.EnumMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * 分页方言工厂类
@@ -34,49 +29,53 @@ import java.util.concurrent.ConcurrentHashMap;
  * @since 2016-01-23
  */
 public class DialectFactory {
+    private static final Map<DbType, IDialect> DIALECT_ENUM_MAP = new EnumMap<>(DbType.class);
 
-    /**
-     * 方言缓存
-     */
-    private static final Map<String, IDialect> DIALECT_CACHE = new ConcurrentHashMap<>();
-
-    /**
-     * Physical Page Interceptor for all the queries with parameter
-     * {@link RowBounds}
-     *
-     * @param page         翻页对象
-     * @param buildSql     编译 SQL
-     * @param dbType       数据类型
-     * @param dialectClazz 数据库方言
-     * @return 分页模型
-     */
-    public static DialectModel buildPaginationSql(IPage<?> page, String buildSql, DbType dbType, String dialectClazz) {
-        // fix #196
-        return getDialect(dbType, dialectClazz).buildPaginationSql(buildSql, page.offset(), page.getSize());
-    }
-
-    /**
-     * 获取数据库方言
-     *
-     * @param dbType       数据库类型
-     * @param dialectClazz 自定义方言实现类
-     * @return ignore
-     */
-    private static IDialect getDialect(DbType dbType, String dialectClazz) {
-        return DIALECT_CACHE.computeIfAbsent(dbType.getDb(), key -> {
-            IDialect dialect = null;
-            String dialectClassName = StringUtils.isBlank(dialectClazz) ? dbType.getDialect() : dialectClazz;
-            try {
-                Class<?> clazz = Class.forName(dialectClassName);
-                if (IDialect.class.isAssignableFrom(clazz)) {
-                    dialect = (IDialect) ClassUtils.newInstance(clazz);
-                }
-            } catch (ClassNotFoundException e) {
-                throw ExceptionUtils.mpe("Class : %s is not found", dialectClazz);
+    public static IDialect getDialect(DbType dbType) {
+        IDialect dialect = DIALECT_ENUM_MAP.get(dbType);
+        if (null == dialect) {
+            if (dbType == DbType.OTHER) {
+                ExceptionUtils.mpe("%s database not supported.", dbType.getDb());
             }
-            /* 未配置方言则抛出异常 */
-            Assert.notNull(dialect, "The value of the dialect property in mybatis configuration.xml is not defined.");
-            return dialect;
-        });
+            // mysql same type
+            else if (dbType == DbType.MYSQL
+                || dbType == DbType.MARIADB
+                || dbType == DbType.GBASE
+                || dbType == DbType.OSCAR
+                || dbType == DbType.XU_GU
+                || dbType == DbType.CLICK_HOUSE
+                || dbType == DbType.OCEAN_BASE) {
+                dialect = new MySqlDialect();
+            }
+            // oracle same type
+            else if (dbType == DbType.ORACLE
+                || dbType == DbType.DM
+                || dbType == DbType.GAUSS) {
+                dialect = new OracleDialect();
+            }
+            // postgresql same type
+            else if (dbType == DbType.POSTGRE_SQL
+                || dbType == DbType.H2
+                || dbType == DbType.SQLITE
+                || dbType == DbType.HSQL
+                || dbType == DbType.KINGBASE_ES
+                || dbType == DbType.PHOENIX) {
+                dialect = new PostgreDialect();
+            } else if (dbType == DbType.HIGH_GO) {
+                dialect = new HighGoDialect();
+            } else if (dbType == DbType.ORACLE_12C) {
+                dialect = new Oracle12cDialect();
+            } else if (dbType == DbType.DB2) {
+                dialect = new DB2Dialect();
+            } else if (dbType == DbType.SQL_SERVER2005) {
+                dialect = new SQLServer2005Dialect();
+            } else if (dbType == DbType.SQL_SERVER) {
+                dialect = new SQLServerDialect();
+            } else if (dbType == DbType.SYBASE) {
+                dialect = new SybaseDialect();
+            }
+            DIALECT_ENUM_MAP.put(dbType, dialect);
+        }
+        return dialect;
     }
 }

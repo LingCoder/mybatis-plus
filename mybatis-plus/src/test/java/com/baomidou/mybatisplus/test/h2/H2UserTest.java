@@ -15,10 +15,14 @@
  */
 package com.baomidou.mybatisplus.test.h2;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import com.baomidou.mybatisplus.core.conditions.query.QueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.UpdateWrapper;
 import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
+import com.baomidou.mybatisplus.core.toolkit.support.SFunction;
 import com.baomidou.mybatisplus.test.h2.entity.H2User;
 import com.baomidou.mybatisplus.test.h2.enums.AgeEnum;
 import com.baomidou.mybatisplus.test.h2.service.IH2UserService;
@@ -280,29 +284,50 @@ class H2UserTest extends BaseTest {
     @Test
     @Order(21)
     void testSaveBatch() {
+        Assertions.assertTrue(userService.saveBatch(Arrays.asList(new H2User("saveBatch0"))));
         Assertions.assertTrue(userService.saveBatch(Arrays.asList(new H2User("saveBatch1"), new H2User("saveBatch2"), new H2User("saveBatch3"), new H2User("saveBatch4"))));
+        Assertions.assertEquals(5, userService.count(new QueryWrapper<H2User>().like("name", "saveBatch")));
         Assertions.assertTrue(userService.saveBatch(Arrays.asList(new H2User("saveBatch5"), new H2User("saveBatch6"), new H2User("saveBatch7"), new H2User("saveBatch8")), 2));
+        Assertions.assertEquals(9, userService.count(new QueryWrapper<H2User>().like("name", "saveBatch")));
     }
 
     @Test
     @Order(22)
     void testUpdateBatch() {
-        Assertions.assertTrue(userService.updateBatchById(Arrays.asList(new H2User(1010L, "batch1010"), new H2User(1011L, "batch1011"), new H2User(1010L, "batch1010"), new H2User(1012L, "batch1012"))));
-        Assertions.assertTrue(userService.updateBatchById(Arrays.asList(new H2User(1010L, "batch1010A"), new H2User(1011L, "batch1011A"), new H2User(1010L, "batch1010"), new H2User(1012L, "batch1012")), 1));
+        Assertions.assertTrue(userService.updateBatchById(Arrays.asList(new H2User(1010L, "batch1010"),
+            new H2User(1011L, "batch1011"), new H2User(1010L, "batch1010"), new H2User(1012L, "batch1012"))));
+        Assertions.assertEquals(userService.getById(1010L).getName(), "batch1010");
+        Assertions.assertEquals(userService.getById(1011L).getName(), "batch1011");
+        Assertions.assertEquals(userService.getById(1012L).getName(), "batch1012");
+        Assertions.assertTrue(userService.updateBatchById(Arrays.asList(new H2User(1010L, "batch1010A"),
+            new H2User(1011L, "batch1011A"), new H2User(1010L, "batch1010"), new H2User(1012L, "batch1012")), 1));
+        Assertions.assertEquals(userService.getById(1010L).getName(), "batch1010");
+        Assertions.assertEquals(userService.getById(1011L).getName(), "batch1011A");
+        Assertions.assertEquals(userService.getById(1012L).getName(), "batch1012");
     }
 
     @Test
     @Order(23)
     void testSaveOrUpdateBatch() {
-        Assertions.assertTrue(userService.saveOrUpdateBatch(Arrays.asList(new H2User(1010L, "batch1010"), new H2User("batch1011"), new H2User(1010L, "batch1010"), new H2User("batch1015"))));
-        Assertions.assertTrue(userService.saveOrUpdateBatch(Arrays.asList(new H2User(1010L, "batch1010A"), new H2User("batch1011A"), new H2User(1010L, "batch1010"), new H2User("batch1016")), 1));
+        Assertions.assertTrue(userService.saveOrUpdateBatch(Arrays.asList(new H2User(1010L, "batch1010"),
+            new H2User("batch1011"), new H2User(1010L, "batch1010"), new H2User("batch1015"))));
+        Assertions.assertEquals(userService.getById(1010L).getName(), "batch1010");
+        Assertions.assertEquals(userService.count(new QueryWrapper<H2User>().eq("name", "batch1011")), 1);
+        Assertions.assertEquals(userService.count(new QueryWrapper<H2User>().eq("name", "batch1015")), 1);
+        Assertions.assertTrue(userService.saveOrUpdateBatch(Arrays.asList(new H2User(1010L, "batch1010A"),
+            new H2User("batch1011AB"), new H2User(1010L, "batch1010"), new H2User("batch1016")), 1));
+        Assertions.assertEquals(userService.getById(1010L).getName(), "batch1010");
+        Assertions.assertEquals(userService.count(new QueryWrapper<H2User>().eq("name", "batch1011AB")), 1);
+        Assertions.assertEquals(userService.count(new QueryWrapper<H2User>().eq("name", "batch1016")), 1);
     }
 
     @Test
     @Order(24)
     void testSimpleAndBatch() {
         Assertions.assertTrue(userService.save(new H2User("testSimpleAndBatch1", 0)));
+        Assertions.assertEquals(1, userService.count(new QueryWrapper<H2User>().eq("name", "testSimpleAndBatch1")));
         Assertions.assertTrue(userService.saveOrUpdateBatch(Arrays.asList(new H2User("testSimpleAndBatch2"), new H2User("testSimpleAndBatch3"), new H2User("testSimpleAndBatch4")), 1));
+        Assertions.assertEquals(4, userService.count(new QueryWrapper<H2User>().like("name", "testSimpleAndBatch")));
     }
 
     @Test
@@ -324,10 +349,10 @@ class H2UserTest extends BaseTest {
         Assertions.assertNotEquals(0L, userService.lambdaQuery().like(H2User::getName, "a").count().longValue());
 
         List<H2User> users = userService.lambdaQuery().like(H2User::getName, "T")
-                .ne(H2User::getAge, AgeEnum.TWO)
-                .ge(H2User::getVersion, 1)
-                .isNull(H2User::getPrice)
-                .list();
+            .ne(H2User::getAge, AgeEnum.TWO)
+            .ge(H2User::getVersion, 1)
+            .isNull(H2User::getPrice)
+            .list();
         Assertions.assertTrue(users.isEmpty());
     }
 
@@ -346,8 +371,8 @@ class H2UserTest extends BaseTest {
     void testSaveBatchException() {
         try {
             userService.saveBatch(Arrays.asList(
-                    new H2User(1L, "tom"),
-                    new H2User(1L, "andy")
+                new H2User(1L, "tom"),
+                new H2User(1L, "andy")
             ));
         } catch (Exception e) {
             Assertions.assertTrue(e instanceof DataAccessException);
@@ -367,7 +392,24 @@ class H2UserTest extends BaseTest {
     }
 
     @Test
-    public void myQueryWithGroupByOrderBy() {
+    @Order(30)
+    void testSaveBatchNoTransactional1() {
+        userService.testSaveBatchNoTransactional1();
+        Assertions.assertEquals(3, userService.count(new QueryWrapper<H2User>().like("name", "testSaveBatchNoTransactional1")));
+    }
+
+    @Test
+    @Order(30)
+    void testSaveBatchNoTransactional2() {
+        try {
+            userService.testSaveBatchNoTransactional2();
+        } catch (Exception e) {
+            Assertions.assertEquals(3, userService.count(new QueryWrapper<H2User>().like("name", "testSaveBatchNoTransactional2")));
+        }
+    }
+
+    @Test
+    void myQueryWithGroupByOrderBy() {
         userService.mySelectMaps().forEach(System.out::println);
     }
 
@@ -424,4 +466,63 @@ class H2UserTest extends BaseTest {
         };
     }
 
+    @Test
+    void testSimpleWrapperClear() {
+        userService.save(new H2User("逗号", AgeEnum.TWO));
+        QueryWrapper<H2User> queryWrapper = new QueryWrapper<H2User>().eq("name", "咩咩");
+        Assertions.assertEquals(0, userService.count(queryWrapper));
+        queryWrapper.clear();
+        queryWrapper.eq("name", "逗号");
+        Assertions.assertEquals(1, userService.count(queryWrapper));
+        UpdateWrapper<H2User> updateWrapper = new UpdateWrapper<>();
+        updateWrapper.set("name", "逗号二号");
+        Assertions.assertFalse(userService.update(updateWrapper.eq("name", "逗号一号")));
+        updateWrapper.clear();
+        updateWrapper.set("name", "逗号一号");
+        Assertions.assertTrue(userService.update(updateWrapper.eq("name", "逗号")));
+    }
+
+    @Test
+    void testLambdaWrapperClear() {
+        userService.save(new H2User("小红", AgeEnum.TWO));
+        LambdaQueryWrapper<H2User> lambdaQueryWrapper = new QueryWrapper<H2User>().lambda().eq(H2User::getName, "小宝");
+        lambdaQueryWrapper.orderByDesc(H2User::getName);
+        Assertions.assertEquals(0, userService.count(lambdaQueryWrapper));
+        lambdaQueryWrapper.clear();
+        lambdaQueryWrapper.eq(H2User::getName, "小红");
+        Assertions.assertEquals(1, userService.count(lambdaQueryWrapper));
+        LambdaUpdateWrapper<H2User> lambdaUpdateWrapper = new UpdateWrapper<H2User>().lambda().set(H2User::getName, "小红二号");
+        Assertions.assertFalse(userService.update(lambdaUpdateWrapper.eq(H2User::getName, "小红一号")));
+        lambdaUpdateWrapper.clear();
+        lambdaUpdateWrapper.set(H2User::getName, "小红一号");
+        Assertions.assertTrue(userService.update(lambdaUpdateWrapper.eq(H2User::getName, "小红")));
+    }
+
+    @Test
+    void testLogicDelWithFill() {
+        H2User h2User = new H2User("逻辑删除(根据ID)不填充", AgeEnum.TWO);
+        userService.save(h2User);
+        userService.removeById(h2User.getTestId());
+        Assertions.assertNull(h2User.getLastUpdatedDt());
+        h2User = new H2User("测试逻辑(根据实体)删除填充", AgeEnum.TWO);
+        userService.save(h2User);
+        userService.removeById(h2User);
+        Assertions.assertNotNull(h2User.getLastUpdatedDt());
+    }
+
+    /**
+     * 观察 {@link com.baomidou.mybatisplus.core.toolkit.LambdaUtils#extract(SFunction)}
+     */
+    @RepeatedTest(1000)
+    void testLambdaCache() {
+        lambdaCache();
+    }
+
+    private void lambdaCache() {
+        Wrappers.<H2User>lambdaQuery()
+            .eq(H2User::getAge, 2)
+            .eq(H2User::getName, 2)
+            .eq(H2User::getPrice, 2)
+            .getTargetSql();
+    }
 }

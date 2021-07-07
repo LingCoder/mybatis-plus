@@ -62,8 +62,8 @@ class MysqlTestDataMapperTest {
 
     protected final List<String> list = Arrays.asList("1", "2", "3");
     protected final Map<String, Object> map = list.parallelStream().collect(toMap(identity(), identity()));
-    private final int success = 1;
-    private final int fail = 0;
+    private static final int success = 1;
+    private static final int fail = 0;
     @Resource(name = "commonDataMapper")
     protected CommonDataMapper commonDataMapper;
     @Resource(name = "commonDataChildrenMapper")
@@ -99,7 +99,9 @@ class MysqlTestDataMapperTest {
                 .setTestEnum(TestEnum.ONE));
             commonLogicDataMapper.insert(new CommonLogicData().setTestInt(i).setTestStr(str).setId(id));
             resultMapEntityMapper.insert(new ResultMapEntity().setId(id).setList(list).setMap(map).setMapp(map));
-            mysqlMapper.insert(new MysqlData().setOrder(i).setGroup(i).setId(id).setTestStr(str).setYaHoStr(str));
+            MysqlData data = new MysqlData().setOrder(i).setGroup(i).setTestStr(str).setYaHoStr(str);
+            mysqlMapper.insert(data);
+            assertThat(data.getId()).isNotNull();
         }
     }
 
@@ -140,5 +142,14 @@ class MysqlTestDataMapperTest {
         map2.put("id", id);
         map2.put("`order`", 5);
         assertEquals(fail, mysqlMapper.deleteByMap(map2));
+    }
+
+    @Test
+    void a05_select() {
+        long id = 4L;
+        List<ResultMapEntity> entitys = resultMapEntityMapper.selectBatchIds(Collections.singletonList(id));
+        assertThat(entitys).isNotEmpty();
+        assertThat(entitys.size()).isEqualTo(1);
+        assertThat(entitys.get(0).getColumn4()).isNotNull();
     }
 }

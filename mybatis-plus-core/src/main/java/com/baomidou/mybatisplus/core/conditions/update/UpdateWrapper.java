@@ -1,17 +1,17 @@
 /*
- * Copyright (c) 2011-2020, baomidou (jobob@qq.com).
- * <p>
- * Licensed under the Apache License, Version 2.0 (the "License"); you may not
- * use this file except in compliance with the License. You may obtain a copy of
- * the License at
- * <p>
- * https://www.apache.org/licenses/LICENSE-2.0
- * <p>
+ * Copyright (c) 2011-2021, baomidou (jobob@qq.com).
+ *
+ * Licensed under the Apache License, Version 2.0 (the "License");
+ * you may not use this file except in compliance with the License.
+ * You may obtain a copy of the License at
+ *
+ *     http://www.apache.org/licenses/LICENSE-2.0
+ *
  * Unless required by applicable law or agreed to in writing, software
- * distributed under the License is distributed on an "AS IS" BASIS, WITHOUT
- * WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the
- * License for the specific language governing permissions and limitations under
- * the License.
+ * distributed under the License is distributed on an "AS IS" BASIS,
+ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+ * See the License for the specific language governing permissions and
+ * limitations under the License.
  */
 package com.baomidou.mybatisplus.core.conditions.update;
 
@@ -19,7 +19,7 @@ import com.baomidou.mybatisplus.core.conditions.AbstractWrapper;
 import com.baomidou.mybatisplus.core.conditions.SharedString;
 import com.baomidou.mybatisplus.core.conditions.segments.MergeSegments;
 import com.baomidou.mybatisplus.core.toolkit.CollectionUtils;
-import com.baomidou.mybatisplus.core.toolkit.StringPool;
+import com.baomidou.mybatisplus.core.toolkit.Constants;
 import com.baomidou.mybatisplus.core.toolkit.StringUtils;
 
 import java.util.ArrayList;
@@ -48,21 +48,23 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
     }
 
     public UpdateWrapper(T entity) {
-        this.setEntity(entity);
-        this.initNeed();
+        super.setEntity(entity);
+        super.initNeed();
         this.sqlSet = new ArrayList<>();
     }
 
     private UpdateWrapper(T entity, List<String> sqlSet, AtomicInteger paramNameSeq,
-                          Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments,
-                          SharedString lastSql, SharedString sqlComment) {
-        this.setEntity(entity);
+                          Map<String, Object> paramNameValuePairs, MergeSegments mergeSegments, SharedString paramAlias,
+                          SharedString lastSql, SharedString sqlComment, SharedString sqlFirst) {
+        super.setEntity(entity);
         this.sqlSet = sqlSet;
         this.paramNameSeq = paramNameSeq;
         this.paramNameValuePairs = paramNameValuePairs;
         this.expression = mergeSegments;
+        this.paramAlias = paramAlias;
         this.lastSql = lastSql;
         this.sqlComment = sqlComment;
+        this.sqlFirst = sqlFirst;
     }
 
     @Override
@@ -70,15 +72,15 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
         if (CollectionUtils.isEmpty(sqlSet)) {
             return null;
         }
-        return String.join(StringPool.COMMA, sqlSet);
+        return String.join(Constants.COMMA, sqlSet);
     }
 
     @Override
-    public UpdateWrapper<T> set(boolean condition, String column, Object val) {
-        if (condition) {
-            sqlSet.add(String.format("%s=%s", column, formatSql("{0}", val)));
-        }
-        return typedThis;
+    public UpdateWrapper<T> set(boolean condition, String column, Object val, String mapping) {
+        return maybeDo(condition, () -> {
+            String sql = formatParam(mapping, val);
+            sqlSet.add(column + Constants.EQUALS + sql);
+        });
     }
 
     @Override
@@ -89,16 +91,28 @@ public class UpdateWrapper<T> extends AbstractWrapper<T, String, UpdateWrapper<T
         return typedThis;
     }
 
+    @Override
+    protected String columnSqlInjectFilter(String column) {
+        return StringUtils.replaceBlank(column);
+    }
+
     /**
      * 返回一个支持 lambda 函数写法的 wrapper
      */
     public LambdaUpdateWrapper<T> lambda() {
-        return new LambdaUpdateWrapper<>(getEntity(), sqlSet, paramNameSeq, paramNameValuePairs, expression, lastSql, sqlComment);
+        return new LambdaUpdateWrapper<>(getEntity(), getEntityClass(), sqlSet, paramNameSeq, paramNameValuePairs,
+            expression, paramAlias, lastSql, sqlComment, sqlFirst);
     }
 
     @Override
     protected UpdateWrapper<T> instance() {
-        return new UpdateWrapper<>(getEntity(), sqlSet, paramNameSeq, paramNameValuePairs, new MergeSegments(),
-            SharedString.emptyString(), SharedString.emptyString());
+        return new UpdateWrapper<>(getEntity(), null, paramNameSeq, paramNameValuePairs, new MergeSegments(),
+            paramAlias, SharedString.emptyString(), SharedString.emptyString(), SharedString.emptyString());
+    }
+
+    @Override
+    public void clear() {
+        super.clear();
+        sqlSet.clear();
     }
 }

@@ -15,12 +15,12 @@
  */
 package com.baomidou.mybatisplus.test.h2.service;
 
-import java.util.List;
-import java.util.Map;
-
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.service.IService;
 import com.baomidou.mybatisplus.test.h2.entity.H2User;
+
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service层测试
@@ -53,4 +53,8 @@ public interface IH2UserService extends IService<H2User> {
     void testSaveOrUpdateBatchTransactional();
 
     void testSimpleAndBatchTransactional();
+
+    void testSaveBatchNoTransactional1();
+
+    void testSaveBatchNoTransactional2();
 }

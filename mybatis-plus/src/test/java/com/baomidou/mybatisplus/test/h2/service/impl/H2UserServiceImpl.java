@@ -15,13 +15,6 @@
  */
 package com.baomidou.mybatisplus.test.h2.service.impl;
 
-import java.util.Arrays;
-import java.util.List;
-import java.util.Map;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
-
 import com.baomidou.mybatisplus.core.exceptions.MybatisPlusException;
 import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.core.metadata.OrderItem;
@@ -30,6 +23,12 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import com.baomidou.mybatisplus.test.h2.entity.H2User;
 import com.baomidou.mybatisplus.test.h2.mapper.H2UserMapper;
 import com.baomidou.mybatisplus.test.h2.service.IH2UserService;
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
+import java.util.Arrays;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Service层测试
@@ -122,5 +121,17 @@ public class H2UserServiceImpl extends ServiceImpl<H2UserMapper, H2User> impleme
         saveBatch(Arrays.asList(new H2User("simpleAndBatchTx2", 0), new H2User("simpleAndBatchTx3", 0), new H2User("simpleAndBatchTx4", 0)), 1);
         saveOrUpdateBatch(Arrays.asList(new H2User("simpleAndBatchTx5", 0), new H2User("simpleAndBatchTx6", 0), new H2User("simpleAndBatchTx7", 0)), 1);
         throw new MybatisPlusException("测试事务回滚");
+    }
+
+    @Override
+    public void testSaveBatchNoTransactional1() {
+        saveBatch(Arrays.asList(new H2User("testSaveBatchNoTransactional1", 0), new H2User("testSaveBatchNoTransactional1", 0), new H2User("testSaveBatchNoTransactional1", 0)), 1);
+    }
+
+    @Override
+    public void testSaveBatchNoTransactional2() {
+        //非事物下，制造一个批量主键冲突
+        save(new H2User(1577431655447L, "testSaveBatchNoTransactional2"));
+        saveBatch(Arrays.asList(new H2User("testSaveBatchNoTransactional2", 0), new H2User("testSaveBatchNoTransactional2", 0), new H2User(1577431655447L, "testSaveBatchNoTransactional2")), 1);
     }
 }
